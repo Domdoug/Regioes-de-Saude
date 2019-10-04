@@ -141,11 +141,11 @@ len(contar2)
 
 #atualizacao somente da linha onde está o baixo amazonas. Não esquecer de deletar a outra linha. Baixo Amazonas (PA)
 lista1.loc[lista1['NM_REGIAO_SAUDE_ATUAL']=='Baixo Amazonas', 'CD_MUNICIPIO'] = contar1
-lista1 = lista1.drop(lista1[(lista1['NM_REGIAO_SAUDE_ATUAL']=='Baixo Amazonas') & (lista1['SG_UF']=='PA')].index) # nao esquecer index
+# lista1 = lista1.drop(lista1[(lista1['NM_REGIAO_SAUDE_ATUAL']=='Baixo Amazonas') & (lista1['SG_UF']=='PA')].index) # nao esquecer index
 lista1[lista1['NM_REGIAO_SAUDE_ATUAL']=='Baixo Amazonas']
 # para a lista 2: Regiao de Saude Anterior
 lista2.loc[lista2['NM_REGIAO_SAUDE_ANTERIOR']=='Baixo Amazonas', 'CD_MUNICIPIO'] = contar2
-lista2 = lista2.drop(lista2[(lista2['NM_REGIAO_SAUDE_ANTERIOR']=='Baixo Amazonas') & (lista2['SG_UF']=='PA')].index) # nao esquecer index
+# lista2 = lista2.drop(lista2[(lista2['NM_REGIAO_SAUDE_ANTERIOR']=='Baixo Amazonas') & (lista2['SG_UF']=='PA')].index) # nao esquecer index
 lista2[lista2['NM_REGIAO_SAUDE_ANTERIOR']=='Baixo Amazonas']
 
 
@@ -161,7 +161,9 @@ df_regioes_concat1.shape # (5571, 9)
 df_regioes_concat2.shape # (5571, 9)
 
 df_regioes_concat1.head()
+df_regioes_concat1[df_regioes_concat1['NM_REGIAO_SAUDE_ATUAL']=='Baixo Amazonas']
 df_regioes_concat2.head()
+df_regioes_concat2[df_regioes_concat2['NM_REGIAO_SAUDE_ANTERIOR']=='Baixo Amazonas']
 
 # Renomear coluna que foi gerada na juncao do passo anterior
 df_regioes_concat1.rename(columns={'CD_MUNICIPIO_y':'lista_regiao_atual'}, inplace=True)
@@ -360,46 +362,88 @@ plan_qtde_diferenca_uf_media_densidade_menores = qtde_diferenca_uf_media_densida
 
 # Regiao com a menor quantidade de servicos de urgencia e emergencia
 
+# Obs: verificação de um erro no código: df_regioes_concat['flag_municipio_entrou'] = df_regioes_concat['lista_regiao_atual'].map(set) - df_regioes_concat['lista_regiao_anterior'].map(set)
+df_final[df_final['NM_REGIAO_SAUDE_ANTERIOR'].isnull()]
+df_final.info()
+# Deletar o municipios 4300002 (LAGOA DOS PATOS) e 4300001 (LAGOA MIRIM), pois são municipios criados pos arquivo de 2018. Municipios criados no final de 2018
+# df_final = df_final.drop('SG_UF', axis=0)
+# Alternativa ao drop e mais rápido:
+df_final.drop(df_final[(df_final['CD_GC_MUN'] == '4300002') | (df_final['CD_GC_MUN'] == '4300001')].index, inplace=True)
+
+# bacalhau: correção da linha do Municipio: Mojui dos Campos. Pertence ao BAixo Amazonas. Então, copiar o vetor de qualquer municipio desta regiao
+# PAREI AQUI
 
 
-
-
-df_regioes_concat.sort_values('SG_UF', ascending=True, inplace=True)
+df_final.sort_values('SG_UF', ascending=True, inplace=True)
 # instrucao para preencher o dataframe, na coluna lista_regiao_anterior com uma lista vazia, porque nao havia municipios em 2011, comparado com 2018
-for row in df_regioes_concat.loc[df_regioes_concat['lista_regiao_anterior'].isnull(), 'lista_regiao_anterior'].index:
-    df_regioes_concat.at[row, 'lista_regiao_anterior'] = []
+for row in df_final.loc[df_final['lista_regiao_anterior'].isnull(), 'lista_regiao_anterior'].index:
+    df_final.at[row, 'lista_regiao_anterior'] = []
 
 # testes
-df_regioes_concat[df_regioes_concat['lista_regiao_anterior'].isnull()]
-df_regioes_concat[df_regioes_concat['NM_REGIAO_SAUDE_ATUAL']=='Baixo Acre e Purus']
-df_regioes_concat[df_regioes_concat['NM_REGIAO_SAUDE_ATUAL']=='Norte']
+df_final[df_final['lista_regiao_anterior'].isnull()]
+df_final[df_final['lista_regiao_atual'].isnull()]
+df_final[df_final['NM_REGIAO_SAUDE_ATUAL']=='Baixo Acre e Purus']
+df_final[df_final['NM_REGIAO_SAUDE_ATUAL']=='Norte']
 
 # AJUSTAR O DATAFRAME==========================DF_REGIOES_CONCAT PARA  DF_REGIAO_FINAL # SELECAO
 # diferenca das listas de municipios entre a lista atual e anterior, dentro do escopo de cada municipio, como instancia
-df_regioes_concat['flag_municipio_entrou'] = df_regioes_concat['lista_regiao_atual'].map(set) - df_regioes_concat['lista_regiao_anterior'].map(set)
-df_regioes_concat['flag_municipio_saiu'] = df_regioes_concat['lista_regiao_anterior'].map(set) - df_regioes_concat['lista_regiao_atual'].map(set)
+df_final['flag_municipio_entrou'] = df_final['lista_regiao_atual'].map(set) - df_final['lista_regiao_anterior'].map(set)
+df_final['flag_municipio_saiu'] = df_final['lista_regiao_anterior'].map(set) - df_final['lista_regiao_atual'].map(set)
 
 
 # Quantidades:
-df_regioes_concat['cont_municipio_entrou'] = [len(x) for x in df_regioes_concat['flag_municipio_entrou']]
-df_regioes_concat['cont_municipio_saiu'] = [len(x) for x in df_regioes_concat['flag_municipio_saiu']]
+df_final['cont_municipio_entrou'] = [len(x) for x in df_final['flag_municipio_entrou']]
+df_final['cont_municipio_saiu'] = [len(x) for x in df_final['flag_municipio_saiu']]
 
 # Testes de consistencia
-df_regioes_concat[(df_regioes_concat['flag_atual']==0)&(df_regioes_concat['cont_municipio_entrou']>1)]
-df_regioes_concat[(df_regioes_concat['flag_atual']==0)&(df_regioes_concat['cont_municipio_saiu']>1)]
+df_final[(df_final['flag_atual']==0)&(df_final['cont_municipio_entrou']>1)] # OK
+df_final[(df_final['flag_atual']==0)&(df_final['cont_municipio_saiu']>1)]  # OK
 
 
-df_estatistica_entrada = df_regioes_concat[(df_regioes_concat['flag_atual']==1)&(df_regioes_concat['cont_municipio_entrou']!=0)]
-df_estatistica_entrada.shape
+df_estatistica_entrada = df_final[(df_final['flag_atual']==1)&(df_final['cont_municipio_entrou']!=0)]
+df_estatistica_entrada.shape # (1330, 25)
 
 df_result_atual = df_estatistica_entrada.groupby(['SG_UF','NM_REGIAO_SAUDE_ATUAL'])['cont_municipio_entrou', 'cont_municipio_saiu'].agg(['count','min','max','mean']).reset_index()
-df_result_atual
+df_result_atual  # 89 ROWS X 10 COLUMNS
 
 df_result_anterior = df_estatistica_entrada.groupby(['SG_UF','NM_REGIAO_SAUDE_ANTERIOR'])['cont_municipio_entrou', 'cont_municipio_saiu'].agg(['count','min','max','mean']).reset_index()
 df_result_anterior.head()
 
 
 # Resultados para excel (gerencial)
+
+# Create a Pandas Excel writer 
+with pd.ExcelWriter('/home/doug/Documentos/Programas python/Regioes_Saude/Resumo_demanda_Ops_326305.xlsx') as writer:
+    lista1.to_excel(writer, sheet_name='lista1')
+    lista2.to_excel(writer, sheet_name='lista2')
+    linhas_duplicadas.to_excel(writer, sheet_name='linhas_duplicadas')
+    df_unicos.to_excel(writer, sheet_name='unicos')
+    df_final.to_excel(writer, sheet_name='final')
+    df_reg_mesmos_municipios.to_excel(writer, sheet_name='df_reg_mesmos_municipios')
+    qtde_mesma_uf_soma_area.to_excel(writer, sheet_name='qtde_mesma_uf_soma_area')
+    plan_qtde_mesma_uf_soma_area_maiores.to_excel(writer, sheet_name='qtde_mesma_uf_soma_area_ma')
+    plan_qtde_mesma_uf_soma_area_menores.to_excel(writer, sheet_name='qtde_mesma_uf_soma_area_me')
+    qtde_mesma_uf_media_densidade.to_excel(writer, sheet_name='qtde_mesma_uf_media_densidade')
+    plan_qtde_mesma_uf_media_densidade_maiores.to_excel(writer, sheet_name='uf_media_dens_ma')
+    plan_qtde_mesma_uf_media_densidade_menores.to_excel(writer, sheet_name='uf_media_dens_me')
+    df_diferencas.to_excel(writer, sheet_name='df_diferencas')
+    qtde_diferenca_uf_soma_area.to_excel(writer, sheet_name='qtde_diferenca_uf_soma_area')
+    plan_qtde_diferenca_uf_soma_area_maiores.to_excel(writer, sheet_name='diferenca_uf_soma_area_ma')
+    plan_qtde_diferenca_uf_soma_area_menores.to_excel(writer, sheet_name='diferenca_uf_soma_area_me')
+    qtde_diferenca_uf_media_densidade.to_excel(writer, sheet_name='diferenca_uf_media_densidade')
+    plan_qtde_diferenca_uf_media_densidade_maiores.to_excel(writer, sheet_name='diferenca_uf_media_dens_ma')
+    plan_qtde_diferenca_uf_media_densidade_menores.to_excel(writer, sheet_name='diferenca_uf_media_dens_me')
+    df_estatistica_entrada.to_excel(writer, sheet_name='df_estatistica_entrada')
+    df_result_atual.to_excel(writer, sheet_name='df_result_atual')
+    df_result_anterior.to_excel(writer, sheet_name='df_result_anterior')
+
+ 
+# Close the Pandas Excel writer 
+# object and output the Excel file. 
+writer.save()
+writer.close()
+
+
 df_result_atual.to_excel('resultado_atual.xlsx')
 df_result_anterior.to_excel('resultado_anterior.xlsx')
 df_estatistica_entrada.to_excel('resumo_geral_movimentacao.xlsx')
